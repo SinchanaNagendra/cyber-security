@@ -1,0 +1,107 @@
+mport requests
+import socket
+
+# SQL Injection Detection
+def detect_sql_injection(url):
+    injection_payload = "' OR '1'='1"
+    params = {'input': injection_payload}
+    response = requests.get(url, params=params)
+    
+    # Check if response contains clues of SQL injection vulnerability
+    if "syntax error" in response.text or "SQL" in response.text:
+        print(f"[SQL Injection] Potential SQL Injection vulnerability found at {url}")
+    else:
+        print(f"[SQL Injection] No SQL Injection vulnerability found at {url}")
+
+
+# XSS Detection
+def detect_xss(url):
+    xss_payload = "<script>alert('XSS')</script>"
+    params = {'input': xss_payload}
+    response = requests.get(url, params=params)
+    
+    if xss_payload in response.text:
+        print(f"[XSS] Potential XSS vulnerability found at {url}")
+    else:
+        print(f"[XSS] No XSS vulnerability found at {url}")
+
+
+# Insecure Cookies Detection
+def detect_insecure_cookies(url):
+    response = requests.get(url)
+    
+    for cookie in response.cookies:
+        if not cookie.secure:
+            print(f"[Cookies] Insecure cookie found: {cookie.name}")
+        if not cookie.has_nonstandard_attr('HttpOnly'):
+            print(f"[Cookies] Cookie without HttpOnly flag found: {cookie.name}")
+
+
+# Open Ports Detection
+def scan_ports(ip, port_range=(1, 1024)):
+    open_ports = []
+    for port in range(port_range[0], port_range[1]):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            open_ports.append(port)
+        sock.close()
+    
+    if open_ports:
+        print(f"[Port Scan] Open ports found on {ip}: {open_ports}")
+    else:
+        print(f"[Port Scan] No open ports found on {ip}.")
+
+
+# HTTP Security Headers Check
+def check_security_headers(url):
+    response = requests.get(url)
+    
+    security_headers = [
+        "X-Frame-Options", 
+        "Strict-Transport-Security", 
+        "X-Content-Type-Options",
+        "Content-Security-Policy"
+    ]
+    
+    for header in security_headers:
+        if header in response.headers:
+            print(f"[Headers] {header} is present.")
+        else:
+            print(f"[Headers] {header} is missing.")
+
+
+# Main Function to Combine All Tests
+def run_security_scanner(url):
+    print(f"\nRunning security scanner for {url}\n")
+    
+    # Run SQL Injection Test
+    detect_sql_injection(url)
+    
+    # Run XSS Test
+    detect_xss(url)
+    
+    # Run Insecure Cookies Test
+    detect_insecure_cookies(url)
+    
+    # Run HTTP Security Headers Test
+    check_security_headers(url)
+
+    # Extract domain or IP for port scanning
+    domain = url.split("//")[-1].split("/")[0]
+    
+    # Run Port Scanning Test
+    try:
+        ip = socket.gethostbyname(domain)
+        scan_ports(ip)
+    except Exception as e:
+        print(f"[Port Scan] Could not resolve domain to IP: {domain}. Error: {e}")
+
+
+# Example Usage
+if _name_ == "_main_":
+    # Replace with the target URL
+    target_url = "http://example.com"
+    
+    run_security_scanner(target_url)
